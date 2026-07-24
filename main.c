@@ -1,13 +1,29 @@
 #include "overlay_window.h"
+#include "main_window.h"
+#include "fake_mouse.h"
+#include "global_keybind.h"
+#include "app_state.h"
+#include "config.h"
 
-#include <SDL3/SDL.h>
 #include <stdio.h>
+#include <threads.h>
 
 int main() {
-    SDL_Init(SDL_INIT_VIDEO);
+    load_config();
     
+    thrd_t t_mouse;
+    thrd_create(&t_mouse, mouse_thread, NULL);
+    thrd_t t_bind;
+    thrd_create(&t_bind, keybind_thread, NULL);
     
+    int result = create_window();
     
+    set_running(false);
+    thrd_join(t_mouse, NULL);
+    thrd_join(t_bind, NULL);
+    
+    save_config();
+    /*
     OverlayResult result;
     
     
@@ -25,7 +41,7 @@ int main() {
                 );
         }
     }
-    
+    */
 
-    return 0;
+    return result;
 }
