@@ -64,37 +64,38 @@ wayland_generate(
 
 add_executable(${PROJECT_NAME}
     stb_image.h
-    ${xdg-output_SOURCES}
+    assets/assets.h
+    assets/assets.c
 
     main.c
-    wayland.h
-    wayland.c
-    overlay_window.h
-    overlay_window_sdl.c
     fake_mouse.h
     fake_mouse.c
     main_window.h
     main_window_imgui.cpp
-    logo_anim.h
-    logo_anim.c
     app_state.h
     app_state.c
     global_keybind.h
     global_keybind.c
     evtest_key.h
+    evtest_key.c
     config.h
     config.c
+#    ${xdg-output_SOURCES}
+#    wayland.h
+#    wayland.c
+#    overlay_window.h
+#    overlay_window_sdl.c
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${WAYLAND_INCLUDE_DIRS}
-    ${CMAKE_BINARY_DIR}/generated
+#    ${CMAKE_BINARY_DIR}/generated
+#    ${WAYLAND_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    ${WAYLAND_LIBRARIES}
     SDL3::SDL3
     imgui
+#    ${WAYLAND_LIBRARIES}
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wno-initializer-overrides)

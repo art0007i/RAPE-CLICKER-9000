@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <stdatomic.h>
 
+#define ABS_MAX 65535
 
 void nssleep(uint64_t ns) {
     struct timespec ts;
@@ -22,7 +23,6 @@ void nssleep(uint64_t ns) {
     
     thrd_sleep(&ts, NULL);
 }
-
 
 static int mouse_fd;
 
@@ -42,8 +42,8 @@ void init_mouse() {
     ioctl(mouse_fd, UI_SET_KEYBIT, BTN_LEFT);
     ioctl(mouse_fd, UI_SET_KEYBIT, BTN_MIDDLE);
     ioctl(mouse_fd, UI_SET_KEYBIT, BTN_RIGHT);
-    //ioctl(mouse_fd, UI_SET_KEYBIT, BTN_SIDE);
-    //ioctl(mouse_fd, UI_SET_KEYBIT, BTN_EXTRA);
+    ioctl(mouse_fd, UI_SET_KEYBIT, BTN_SIDE);
+    ioctl(mouse_fd, UI_SET_KEYBIT, BTN_EXTRA);
     
     // Allow relative movement
     ioctl(mouse_fd, UI_SET_EVBIT, EV_REL);
@@ -53,9 +53,18 @@ void init_mouse() {
     ioctl(mouse_fd, UI_SET_RELBIT, REL_HWHEEL);
     
     // Allow absolute movement
-    // ioctl(mouse_fd, UI_SET_EVBIT, EV_ABS);
-    // ioctl(mouse_fd, UI_SET_ABSBIT, ABS_X);
-    // ioctl(mouse_fd, UI_SET_ABSBIT, ABS_Y);
+    ioctl(mouse_fd, UI_SET_EVBIT, EV_ABS);
+    ioctl(mouse_fd, UI_SET_ABSBIT, ABS_X);
+    ioctl(mouse_fd, UI_SET_ABSBIT, ABS_Y);
+    static struct uinput_abs_setup abs;
+    abs.code = ABS_X;
+    abs.absinfo.minimum = 0;
+    abs.absinfo.maximum = ABS_MAX;
+    ioctl(mouse_fd, UI_ABS_SETUP, &abs);
+    abs.code = ABS_Y;
+    abs.absinfo.minimum = 0;
+    abs.absinfo.maximum = ABS_MAX;
+    ioctl(mouse_fd, UI_ABS_SETUP, &abs);
     
     // Setup device params
     struct uinput_setup setup;
@@ -92,8 +101,8 @@ void write_event(int fd, int type, int code, int val)
 
 void mouse_move(float x, float y)
 {    
-    int x_rel = (x * 65535);
-    int y_rel = (x * 65535);
+    int x_rel = (x * ABS_MAX);
+    int y_rel = (x * ABS_MAX);
     
     write_event(mouse_fd, EV_ABS, ABS_X, x_rel);
     write_event(mouse_fd, EV_ABS, ABS_Y, y_rel);
@@ -119,8 +128,9 @@ static atomic_bool running = true;
 int mouse_thread() {
     init_mouse();
     
+    int clicks_this_run = 0;
     while(get_running()) {
-        uint64_t ns = get_delay_ns();
+        uint64_t ns = get_click_delay();
         int delay = 1000000;
         if (ns < 1000000) {
             delay = ns;
@@ -129,13 +139,19 @@ int mouse_thread() {
             ns -= 1000000;
         }
         if (get_clicking()) {
-            mouse_click(BTN_LEFT, delay);
+            clicks_this_run += 1;
+            mouse_click(get_click_button(), delay);
             if (ns > 0) {
                 fflush(stdout);
                 nssleep(ns);
             }
+            int limit = get_click_limit();
+            if(limit >= 0 && clicks_this_run >= limit) {
+                set_clicking(false);
+            }
         }
         else {
+            clicks_this_run = 0;
             nssleep(100000000);
         }
     }

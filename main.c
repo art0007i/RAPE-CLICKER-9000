@@ -1,4 +1,3 @@
-#include "overlay_window.h"
 #include "main_window.h"
 #include "fake_mouse.h"
 #include "global_keybind.h"
@@ -9,6 +8,7 @@
 #include <threads.h>
 
 int main() {
+    reset_splash_params();
     load_config();
     
     thrd_t t_mouse;

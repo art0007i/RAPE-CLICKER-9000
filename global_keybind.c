@@ -150,7 +150,7 @@ int open_current_device() {
     
     printf("Open fd: %d\n", fd);
     
-    unsigned long key_bits[NBITS(KEY_MAX + 1)];
+    unsigned long key_bits[NBITS(KEY_CNT)];
     memset(key_bits, 0, sizeof(key_bits));
     
     if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) < 0){
@@ -158,17 +158,17 @@ int open_current_device() {
         return 1;
     }
     
-    event events[KEY_MAX] = {};
+    event events[KEY_CNT] = {};
     size_t event_count = 0;
-    int listen_key = get_listen_key();
+    int listen_key = get_keybind_event();
     bool listen_invalid = true;
     
-    for (int key = 0; key <= KEY_MAX; key++) {
+    for (int key = 0; key < KEY_CNT; key++) {
         if (test_bit(key, key_bits)) {
             if (key == listen_key) {
                 listen_invalid = false;
             }
-            const char *key_name = keys[key] ? keys[key] : "?"; 
+            const char *key_name = get_key_name(key);
             printf("Supports key code %d (%s)\n", key, key_name);
             events[event_count].code = key;
             events[event_count].name = key_name;
@@ -185,7 +185,7 @@ int open_current_device() {
     memcpy(evt_arr->events, events, array_bytes);
     
     if(listen_invalid) {
-        set_listen_key(-1);
+        set_keybind_event(-1);
     }
     atomic_store(&global_events, evt_arr);
     
@@ -213,20 +213,20 @@ int keybind_thread() {
         }
         
         // TODO: maybe add get_wanted_device_unsafe or something, that would avoid copying the string here, since we only need it to compare
-        char *wanted_device = get_wanted_device();
+        char *wanted_device = get_keybind_device();
         if (should_change(wanted_device, current_device_path)) {
             strncpy(current_device_path, wanted_device, MAX_NAME_SIZE);
             
             set_clicking(false); // just in case...
             printf("Changing device to %s\n", current_device_path);
             if (open_current_device() != 0) {
-                set_wanted_device(NULL);
+                set_keybind_device(NULL);
             }
         }
         free(wanted_device);
         
         if (current_device >= 0) {
-            int key = get_listen_key();
+            int key = get_keybind_event();
             while (get_running()) {
                 // Poll all events.
                 ssize_t n = read(current_device, &ev, sizeof(ev));
@@ -235,11 +235,11 @@ int keybind_thread() {
                         if (ev.value == 1) {
                             if (get_want_read_key()) {
                                 set_want_read_key(false);
-                                set_listen_key(ev.code);
+                                set_keybind_event(ev.code);
                                 key = -1; // Don't listen until next loop...
                             }
                             if (ev.code == key) {
-                                if (get_hold_mode()) {
+                                if (get_keybind_hold()) {
                                     set_clicking(true);
                                 } else {
                                     bool curr = get_clicking();
@@ -247,7 +247,7 @@ int keybind_thread() {
                                 }
                             }
                         }
-                        if (get_hold_mode() && ev.value == 0 && ev.code == key) {
+                        if (get_keybind_hold() && ev.value == 0 && ev.code == key) {
                             set_clicking(false);
                         }
                     }
