@@ -32,9 +32,9 @@ typedef struct {
 } event_array;
 
 int keybind_thread();
-void refresh_devices();
-device_array *get_devices();
-event_array *get_events();
+void refresh_devices(void);
+device_array *get_devices(void);
+event_array *get_events(void);
 
 #ifdef __cplusplus
 }

@@ -21,38 +21,41 @@ typedef struct {
 } splash;
 
 // SAVED
-int get_keybind_event();
+int get_keybind_event(void);
 void set_keybind_event(int);
 
-uint64_t get_click_delay();
+uint64_t get_click_delay(void);
 void set_click_delay(uint64_t);
 
-int get_click_limit();
+uint64_t get_click_length(void);
+void set_click_length(uint64_t);
+
+int get_click_limit(void);
 void set_click_limit(int);
 
-bool get_keybind_hold();
+bool get_keybind_hold(void);
 void set_keybind_hold(bool);
 
-int get_click_button();
+int get_click_button(void);
 void set_click_button(int);
 
-char *get_keybind_device();
-void set_keybind_device(char *);
+char *get_keybind_device(void);
+void set_keybind_device(const char *);
 
 splash *get_splash_params();
 void reset_splash_params();
 
 // TEMPORARY
-bool get_running();
+bool get_running(void);
 void set_running(bool);
 
-bool get_clicking();
+bool get_clicking(void);
 void set_clicking(bool);
 
-bool get_want_read_key();
+bool get_want_read_key(void);
 void set_want_read_key(bool);
 
-bool get_want_save_config();
+bool get_want_save_config(void);
 void set_want_save_config(bool);
 
 #ifdef __cplusplus

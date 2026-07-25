@@ -9,25 +9,34 @@
 #include <linux/uinput.h>
 
 // SAVED
-static atomic_int listen_key;
+static atomic_int keybind_event;
 int get_keybind_event() {
-    return atomic_load(&listen_key);
+    return atomic_load(&keybind_event);
 }
 void set_keybind_event(int key) {
-    atomic_store(&listen_key, key);
+    atomic_store(&keybind_event, key);
     set_want_save_config(true);
 }
 
-static atomic_ullong delay_ns = 10000000;
+static atomic_ullong click_delay = 10000000; // 10 ms
 uint64_t get_click_delay() {
-    return atomic_load(&delay_ns);
+    return atomic_load(&click_delay);
 }
 void set_click_delay(uint64_t d) {
-    atomic_store(&delay_ns, d);
+    atomic_store(&click_delay, d);
     set_want_save_config(true);
 }
 
-static atomic_int click_limit = 1000000;
+static atomic_ullong click_length = 1000000; // 1 ms
+uint64_t get_click_length() {
+    return atomic_load(&click_length);
+}
+void set_click_length(uint64_t key) {
+    atomic_store(&click_length, key);
+    set_want_save_config(true);
+}
+
+static atomic_int click_limit = 1000000; // 1 million
 int get_click_limit() {
     return atomic_load(&click_limit);
 }
@@ -36,34 +45,33 @@ void set_click_limit(int d) {
     set_want_save_config(true);
 }
 
-static atomic_bool hold_mode;
+static atomic_bool keybind_hold;
 bool get_keybind_hold() {
-    return atomic_load(&hold_mode);
+    return atomic_load(&keybind_hold);
 }
 void set_keybind_hold(bool hold) {
-    atomic_store(&hold_mode, hold);
+    atomic_store(&keybind_hold, hold);
     set_want_save_config(true);
 }
 
-static atomic_int click_key = BTN_LEFT;
+static atomic_int click_button = BTN_LEFT;
 int get_click_button() {
-    return atomic_load(&click_key);
+    return atomic_load(&click_button);
 }
 void set_click_button(int key) {
-    atomic_store(&click_key, key);
+    atomic_store(&click_button, key);
     set_want_save_config(true);
 }
 
 static char wanted_device[MAX_NAME_SIZE] = "";
 mtx_t wanted_lock;
 char *get_keybind_device() {
-    char *new_str = malloc(MAX_NAME_SIZE);
     mtx_lock(&wanted_lock);
-    strncpy(new_str, wanted_device, MAX_NAME_SIZE);
+    char *new_str = strdup(wanted_device);
     mtx_unlock(&wanted_lock);
     return new_str;
 }
-void set_keybind_device(char *path) {
+void set_keybind_device(const char *path) {
     mtx_lock(&wanted_lock);
     if (path == NULL) {
         memset(wanted_device, 0, MAX_NAME_SIZE);

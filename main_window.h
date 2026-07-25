@@ -3,6 +3,6 @@
 
 #include <stdbool.h>
 
-int create_window();
+int create_window(void);
 
 #endif // MAIN_WINDOW_H

@@ -13,7 +13,7 @@
 #include <stdbool.h>
 #include <stdatomic.h>
 
-#define ABS_MAX 65535
+#define MOUSE_ABS_MAX 65535
 
 void nssleep(uint64_t ns) {
     struct timespec ts;
@@ -59,11 +59,11 @@ void init_mouse() {
     static struct uinput_abs_setup abs;
     abs.code = ABS_X;
     abs.absinfo.minimum = 0;
-    abs.absinfo.maximum = ABS_MAX;
+    abs.absinfo.maximum = MOUSE_ABS_MAX;
     ioctl(mouse_fd, UI_ABS_SETUP, &abs);
     abs.code = ABS_Y;
     abs.absinfo.minimum = 0;
-    abs.absinfo.maximum = ABS_MAX;
+    abs.absinfo.maximum = MOUSE_ABS_MAX;
     ioctl(mouse_fd, UI_ABS_SETUP, &abs);
     
     // Setup device params
@@ -101,8 +101,8 @@ void write_event(int fd, int type, int code, int val)
 
 void mouse_move(float x, float y)
 {    
-    int x_rel = (x * ABS_MAX);
-    int y_rel = (x * ABS_MAX);
+    int x_rel = (x * MOUSE_ABS_MAX);
+    int y_rel = (x * MOUSE_ABS_MAX);
     
     write_event(mouse_fd, EV_ABS, ABS_X, x_rel);
     write_event(mouse_fd, EV_ABS, ABS_Y, y_rel);
@@ -113,7 +113,7 @@ void mouse_move(float x, float y)
     write_event(mouse_fd, EV_SYN, SYN_REPORT, 0);
 }
 
-void mouse_click(int button, int delay) {
+void mouse_click(int button, uint64_t delay) {
     write_event(mouse_fd, EV_KEY, button, 1);
     write_event(mouse_fd, EV_SYN, SYN_REPORT, 0);
     
@@ -131,12 +131,12 @@ int mouse_thread() {
     int clicks_this_run = 0;
     while(get_running()) {
         uint64_t ns = get_click_delay();
-        int delay = 1000000;
-        if (ns < 1000000) {
+        uint64_t delay =  get_click_length();
+        if (ns < delay) {
             delay = ns;
             ns = 0;
         } else {
-            ns -= 1000000;
+            ns -= delay;
         }
         if (get_clicking()) {
             clicks_this_run += 1;

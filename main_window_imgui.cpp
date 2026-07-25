@@ -2,6 +2,8 @@
 #include "assets/assets.h"
 #include "global_keybind.h"
 #include "evtest_key.h"
+#include "licenses.h"
+#include "version.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -24,11 +26,14 @@ static float splash_anim;
 
 static bool options_window;
 static bool demo_window;
+static bool licenses_window;
+static bool appinfo_window;
 
 static bool need_refresh = true;
 
 static bool done = false;
 
+static SDL_Texture *icon_texture;
 static SDL_Texture *anim_textures[LOGO_ANIM_FRAME_COUNT];
 static size_t anim_frame = 0;
 static float time_passed;
@@ -43,6 +48,7 @@ static bool clicker_debounce;
 static float detect_debounce;
 
 static double click_delay = 10;
+static double click_length = 1;
 
 ImVec2 rotate_vec2(ImVec2 v, float angle)
 {
@@ -181,6 +187,12 @@ void imgui_main() {
             ImGui::MenuItem("Demo Window", NULL, &demo_window);
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("About"))
+        {
+            ImGui::MenuItem("App Info", NULL, &appinfo_window);
+            ImGui::MenuItem("Licenses", NULL, &licenses_window);
+            ImGui::EndMenu();
+        }
         ImGui::EndMenuBar();
     }
     
@@ -215,12 +227,17 @@ void imgui_main() {
     }
     ImGui::EndDisabled();
     
-    ImGui::BeginDisabled(enable_click);    
+    ImGui::BeginDisabled(enable_click);
     if (ImGui::InputDouble("delay ms", &click_delay, 0.01f, 1.0f, "%.6f")) {
         printf("Delay = %f ms\n", click_delay);
         set_click_delay(click_delay * 1000000);
     }
     add_tooltip("using a time less than 1 ms might have detrimental effects on your OS's performance. you have been warned.");
+    if (ImGui::InputDouble("length ms", &click_length, 0.01f, 1.0f, "%.6f")) {
+        printf("Delay = %f ms\n", click_length);
+        set_click_length(click_length * 1000000);
+    }
+    add_tooltip("how long the mouse button is pressed down for each click");
     int key = get_click_button();
     if (ImGui::BeginCombo("mouse button", get_key_name(key))) {
         for (int i = BTN_LEFT; i <= BTN_EXTRA; ++i) {
@@ -279,7 +296,7 @@ void imgui_main() {
             if (ImGui::MenuItem(text, NULL, selected)) {
                 memcpy(selected_device_name, dev->name, MAX_NAME_SIZE);
                 memcpy(selected_device_path, dev->path, MAX_NAME_SIZE);
-                set_keybind_device(strdup(selected_device_path));
+                set_keybind_device(selected_device_path);
             } else if (selected && strcmp(dev->name, selected_device_name) != 0) {
                 memcpy(selected_device_name, dev->name, MAX_NAME_SIZE);                
             }
@@ -382,6 +399,46 @@ void imgui_main() {
         
         ImGui::End();
     }
+    if (appinfo_window) {
+        ImGui::Begin("App Info", &appinfo_window);
+        ImGui::Columns(2, NULL, false);
+        ImVec2 spacing = ImGui::GetStyle().ItemSpacing;
+        float size = ImGui::GetTextLineHeightWithSpacing() * 4 - spacing.y;
+        ImGui::Image(icon_texture, ImVec2(size, size));
+        ImGui::SetColumnWidth(0, size + spacing.x * 2); // remove hardcoding
+        ImGui::NextColumn();
+        ImGui::Text("%s v%s", APP_NAME, APP_VERSION);
+        ImGui::Text(" ");
+        ImGui::Text("Compiled on %s", APP_BUILD_DATE);
+        ImGui::Text("git commit '%s'", APP_GIT_COMMIT);
+        ImGui::EndColumns();
+        ImGui::NewLine();
+        ImGui::Text("Thank you for using %s! <3", APP_NAME);
+        const license *my_license = get_own_license();
+        ImGui::TextLinkOpenURL("Open source code repo", my_license->url);
+        if (ImGui::TreeNode("Software License")) {
+            ImGui::Text("%s", my_license->license);
+            ImGui::TreePop();
+        }
+        ImGui::End();
+    }
+    if (licenses_window) {
+        ImGui::Begin("Licenses", &licenses_window);
+        ImGui::Text("%s is made possible by the following open source libraries:", APP_NAME);
+        const license *licenses = get_licenses();
+        size_t license_count = get_license_count();
+        for (int i = 0; i < license_count; ++i) {
+            ImGui::NewLine();
+            bool node = (ImGui::CollapsingHeader(licenses[i].lib));
+            ImGui::PushID(i);
+            ImGui::TextLinkOpenURL("Open source code repo", licenses[i].url);
+            if (node) {
+                ImGui::Text("%s", licenses[i].license);
+            }
+            ImGui::PopID();
+        }
+        ImGui::End();
+    }    
     if (demo_window) ImGui::ShowDemoWindow(&demo_window);
 }
 
@@ -406,7 +463,10 @@ extern "C" int create_window() {
         return -1;
     }
     
+    // TODO: remove these few lines, instead the ui should not store state at all...
+    // these will have the issue that changing them from other sources will not update imgui
     click_delay = get_click_delay() / 1000000.0;
+    click_length = get_click_length() / 1000000.0;
     char *dev = get_keybind_device();
     strncpy(selected_device_name, "unknown (open dropdown to update)", MAX_NAME_SIZE);
     strncpy(selected_device_path, dev, MAX_NAME_SIZE);
@@ -416,7 +476,7 @@ extern "C" int create_window() {
     SDL_WindowFlags window_flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_TRANSPARENT;
     SDL_Window* window = NULL;
     SDL_Renderer* renderer = NULL;
-    if (!SDL_CreateWindowAndRenderer("RAPE CLICKER 9000", (int)(640 * main_scale), (int)(480 * main_scale), window_flags, &window, &renderer))
+    if (!SDL_CreateWindowAndRenderer(APP_NAME, (int)(640 * main_scale), (int)(480 * main_scale), window_flags, &window, &renderer))
     {
         printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
         return -1;
@@ -424,7 +484,10 @@ extern "C" int create_window() {
     int x,y,comp;
     unsigned char *pixels = stbi_load_from_memory(app_icon, APP_ICON_BYTES, &x, &y, &comp, 4);
     SDL_Surface* surface = SDL_CreateSurfaceFrom(x, y, SDL_PIXELFORMAT_RGBA32, pixels, x * 4);
+    icon_texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_SetWindowIcon(window, surface);
+    SDL_DestroySurface(surface);
+    stbi_image_free(pixels);
     
     load_gif(renderer);
     
