@@ -66,6 +66,7 @@ target_include_directories(imgui PUBLIC
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
 )
+target_link_libraries(imgui PUBLIC SDL3::SDL3-static)
 
 #find_package(PkgConfig REQUIRED)
 #find_package(SDL3 REQUIRED)
@@ -138,7 +139,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    SDL3::SDL3-static
     imgui
 #    ${WAYLAND_LIBRARIES}
 )
