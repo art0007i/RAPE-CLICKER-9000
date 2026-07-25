@@ -1,0 +1,8 @@
+name: Build on Push
+
+on:
+  push:
+
+jobs:
+  build:
+    uses: ./.github/workflows/_build.yml

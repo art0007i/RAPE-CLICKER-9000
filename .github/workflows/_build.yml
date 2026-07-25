@@ -1,0 +1,31 @@
+name: Build
+
+on:
+  workflow_call:
+    outputs:
+      version:
+        value: ${{ jobs.build.outputs.version }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -B build
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat build/version.info)" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAPE-CLICKER-9000
+          path: build/RAPE-CLICKER-9000

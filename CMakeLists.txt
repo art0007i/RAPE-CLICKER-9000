@@ -1,30 +1,34 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(RAPE-CLICKER-9000 C CXX)
+project(RAPE-CLICKER-9000
+    LANGUAGES C CXX
+    VERSION 0.1.0
+)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(APP_NAME "RAPE CLICKER 9000")
-set(APP_VERSION "0.1.0")
-string(TIMESTAMP APP_BUILD_DATE "%Y-%m-%d %H:%M:%S UTC" UTC)
+string(TIMESTAMP PROJECT_BUILD_DATE "%Y-%m-%d %H:%M:%S UTC" UTC)
 
 execute_process(
     COMMAND git rev-parse HEAD
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE APP_GIT_COMMIT
+    OUTPUT_VARIABLE PROJECT_GIT_COMMIT
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET
 )
-if(NOT APP_GIT_COMMIT)
-    set(APP_GIT_COMMIT "unknown")
+if(NOT PROJECT_GIT_COMMIT)
+    set(PROJECT_GIT_COMMIT "unknown")
 endif()
 
 configure_file(
     ${CMAKE_SOURCE_DIR}/cmake/version.h.in
     ${CMAKE_BINARY_DIR}/generated/version.h
 )
+
+file(WRITE "${CMAKE_BINARY_DIR}/version.info" "${PROJECT_VERSION}")
 
 #set(WAYLAND_PROTOCOLS_DIR ${CMAKE_SOURCE_DIR}/protocols)
 
@@ -101,30 +105,30 @@ endfunction()
 
 add_executable(${PROJECT_NAME}
     assets/assets.h
-    fake_mouse.h
-    main_window.h
-    app_state.h
-    global_keybind.h
-    evtest_key.h
-    config.h
-    licenses.h
-    ini.h
+    src/fake_mouse.h
+    src/main_window.h
+    src/app_state.h
+    src/global_keybind.h
+    src/evtest_key.h
+    src/config.h
+    src/licenses.h
+    src/ini.h
 
     assets/assets.c
-    main.c
-    fake_mouse.c
-    main_window_imgui.cpp
-    app_state.c
-    global_keybind.c
-    evtest_key.c
-    config.c
-    licenses.c
-    ini.c
+    src/main.c
+    src/fake_mouse.c
+    src/main_window_imgui.cpp
+    src/app_state.c
+    src/global_keybind.c
+    src/evtest_key.c
+    src/config.c
+    src/licenses.c
+    src/ini.c
 #    ${xdg-output_SOURCES}
-#    wayland.h
-#    wayland.c
-#    overlay_window.h
-#    overlay_window_sdl.c
+#    src/wayland.h
+#    src/wayland.c
+#    src/overlay_window.h
+#    src/overlay_window_sdl.c
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
