@@ -4,6 +4,7 @@
 #include "evtest_key.h"
 #include "licenses.h"
 #include "version.h"
+#include "config.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -496,14 +497,19 @@ extern "C" int create_window() {
     SDL_ShowWindow(window);
     
     ImGui::CreateContext();
-    auto io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGuiIO *io = &ImGui::GetIO();
     
-    io.Fonts->AddFontDefault();
+    static char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s/imgui.ini", get_config_dir());
+    io->IniFilename = path;
+    
+    io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    
+    io->Fonts->AddFontDefault();
     ImFontConfig cfg;
     cfg.FontDataOwnedByAtlas = false;
     strncpy(cfg.Name, "Minecraft", sizeof(cfg.Name));
-    minecraft_font = io.Fonts->AddFontFromMemoryTTF((void*)mc_font, MC_FONT_BYTES, 16.0f, &cfg);
+    minecraft_font = io->Fonts->AddFontFromMemoryTTF((void*)mc_font, MC_FONT_BYTES, 16.0f, &cfg);
     ImGui::StyleColorsDark();
     
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
@@ -523,11 +529,12 @@ extern "C" int create_window() {
         ImGui_ImplSDL3_NewFrame();
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui::NewFrame();
+        ImGui::Text("ImGui ini: %s", ImGui::GetIO().IniFilename);
         
         imgui_main();
         
         ImGui::Render();
-        SDL_SetRenderScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
+        SDL_SetRenderScale(renderer, io->DisplayFramebufferScale.x, io->DisplayFramebufferScale.y);
         auto col = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
         SDL_SetRenderDrawColorFloat(renderer, col.x, col.y, col.z, col.w);
         SDL_RenderClear(renderer);

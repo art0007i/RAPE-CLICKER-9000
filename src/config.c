@@ -6,8 +6,31 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
+#include <sys/stat.h>
 
 #define CONFIG_FILE "clicker.ini"
+
+char config_dir[PATH_MAX] = {};
+
+const char *get_config_dir() {
+    if (strlen(config_dir) > 0) {
+        return config_dir;
+    }
+    
+    const char *xdg = getenv("XDG_CONFIG_HOME");
+    const char *home = getenv("HOME");
+    if (xdg) {
+        snprintf(config_dir, sizeof(config_dir), "%s/rape-clicker-9000", xdg);
+    } else if (home) {
+        snprintf(config_dir, sizeof(config_dir), "%s/.config/rape-clicker-9000", home);
+    } else {
+        snprintf(config_dir, sizeof(config_dir), ".");
+    }
+    
+    mkdir(config_dir, 0755);
+    return config_dir;
+}
 
 typedef void (*cfg_write_fn)(FILE *);
 typedef void (*cfg_read_fn)(const char *);
@@ -151,12 +174,17 @@ static ConfigSection config_sections[] = {
 
 void save_config(void)
 {
-    printf("Saving config file!\n");
-    fflush(stdout);
-    FILE *f = fopen(CONFIG_FILE, "w");
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s/%s", get_config_dir(), CONFIG_FILE);
     
-    if (!f)
+    printf("Saving config file at %s\n", path);
+    fflush(stdout);
+    FILE *f = fopen(path, "w");
+    
+    if (!f) {
+        printf("Can't write '%s'\n", CONFIG_FILE);
         return;
+    }
 
     for (int i = 0; i < SECTION_COUNT; ++i) {
         ConfigSection *s = &config_sections[i];
@@ -167,7 +195,6 @@ void save_config(void)
 
         for (int j = 0; j < s->count; ++j) {
             s->items[j].write(f);
-            // config_entries[i].write(f);
         }
     }
 
@@ -192,7 +219,10 @@ int ini_entry(void* user, const char* section, const char* name, const char* val
 
 void load_config(void)
 {
-    if (ini_parse(CONFIG_FILE, ini_entry, NULL) < 0) {
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s/%s", get_config_dir(), CONFIG_FILE);
+    
+    if (ini_parse(path, ini_entry, NULL) < 0) {
         printf("Can't load '%s'\n", CONFIG_FILE);
     }
 }
