@@ -529,7 +529,6 @@ extern "C" int create_window() {
         ImGui_ImplSDL3_NewFrame();
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui::NewFrame();
-        ImGui::Text("ImGui ini: %s", ImGui::GetIO().IniFilename);
         
         imgui_main();
         
